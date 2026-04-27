@@ -37,7 +37,7 @@ if uploaded_file:
     if st.button("✨ Parse Syllabus", type="primary"):
         with st.spinner("Sending to Claude... this takes 15-30 seconds"):
 
-            client = anthropic.Anthropic(api_key=api_key)
+            client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
 
             prompt = f"""You are an expert academic assistant. I will give you the raw text from a course syllabus.
 
