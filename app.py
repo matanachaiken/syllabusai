@@ -3,12 +3,25 @@ import anthropic
 import PyPDF2
 import markdown
 import io
+import re
+import json
+from icalendar import Calendar, Event
+from datetime import datetime, date
 
 # --- Page Config ---
 st.set_page_config(page_title="SyllabusAI", page_icon="📚", layout="centered")
 
 st.title("📚 SyllabusAI")
 st.caption("Upload a course syllabus PDF and get a full breakdown of assignments, exams, and a personalized study schedule.")
+
+# --- API Key ---
+try:
+    api_key = st.secrets["ANTHROPIC_API_KEY"]
+except:
+    api_key = st.text_input("Anthropic API Key", type="password", placeholder="sk-ant-...")
+    if not api_key:
+        st.info("Enter your Anthropic API key above to get started.")
+        st.stop()
 
 # --- File Upload ---
 uploaded_file = st.file_uploader("Upload your syllabus PDF", type="pdf")
@@ -29,10 +42,10 @@ if uploaded_file:
     st.success(f"✓ Read {len(reader.pages)} pages ({len(pdf_text):,} characters)")
 
     if st.button("✨ Parse Syllabus", type="primary"):
+        client = anthropic.Anthropic(api_key=api_key)
+
+        # --- Parse Syllabus ---
         with st.spinner("Sending to Claude... this takes 15-30 seconds"):
-
-            client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-
             prompt = f"""You are an expert academic assistant. I will give you the raw text from a course syllabus.
 
 Your job is to extract ALL of the following and return them in clean Markdown:
@@ -75,10 +88,75 @@ Here is the syllabus text:
                 max_tokens=4096,
                 messages=[{"role": "user", "content": prompt}]
             )
-
             result = message.content[0].text
 
+        # --- Extract Calendar Events ---
+        with st.spinner("Extracting dates for calendar..."):
+            cal_prompt = f"""Extract all important dates from this syllabus and return ONLY a JSON array, no other text.
+
+Each item should have:
+- "title": name of the assignment/exam/deadline
+- "date": in YYYY-MM-DD format
+- "description": brief description (1 sentence max)
+
+Only include items with specific dates. Example format:
+[
+  {{"title": "Midterm Exam", "date": "2026-03-11", "description": "In-class closed-book exam covering weeks 1-8"}},
+  {{"title": "Final Project Due", "date": "2026-05-01", "description": "Creative project + 3-page reflection"}}
+]
+
+Syllabus text:
+---
+{pdf_text}
+---"""
+
+            cal_message = client.messages.create(
+                model="claude-opus-4-5",
+                max_tokens=2048,
+                messages=[{"role": "user", "content": cal_prompt}]
+            )
+            raw = cal_message.content[0].text.strip()
+            raw = re.sub(r"```json|```", "", raw).strip()
+
+            events = []
+            try:
+                events_data = json.loads(raw)
+                for e in events_data:
+                    try:
+                        d = datetime.strptime(e['date'], "%Y-%m-%d").date()
+                        events.append({
+                            'title': e['title'],
+                            'date': d,
+                            'description': e.get('description', '')
+                        })
+                    except:
+                        continue
+            except:
+                pass
+
         st.success("✓ Done!")
+
+        # --- Calendar Download ---
+        if events:
+            cal = Calendar()
+            cal.add('prodid', '-//SyllabusAI//EN')
+            cal.add('version', '2.0')
+            for e in events:
+                event = Event()
+                event.add('summary', e['title'])
+                event.add('dtstart', e['date'])
+                event.add('dtend', e['date'])
+                if e.get('description'):
+                    event.add('description', e['description'])
+                cal.add_component(event)
+
+            st.download_button(
+                label="📅 Download Calendar File (.ics)",
+                data=cal.to_ical(),
+                file_name="syllabus_calendar.ics",
+                mime="text/calendar"
+            )
+            st.caption(f"Found {len(events)} dates. Open the file to import all events into Google Calendar, Apple Calendar, or Outlook in one click.")
 
         # --- Display Results ---
         tab1, tab2 = st.tabs(["📄 Formatted View", "⬇️ Download"])
@@ -87,7 +165,6 @@ Here is the syllabus text:
             st.markdown(result)
 
         with tab2:
-            # Generate HTML download
             html_body = markdown.markdown(result, extensions=["tables"])
             html = f"""<!DOCTYPE html>
 <html>
