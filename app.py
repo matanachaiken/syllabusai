@@ -10,12 +10,6 @@ st.set_page_config(page_title="SyllabusAI", page_icon="📚", layout="centered")
 st.title("📚 SyllabusAI")
 st.caption("Upload a course syllabus PDF and get a full breakdown of assignments, exams, and a personalized study schedule.")
 
-# --- API Key Input ---
-api_key = st.text_input("Anthropic API Key", type="password", placeholder="sk-ant-...")
-if not api_key:
-    st.info("Enter your Anthropic API key above to get started.")
-    st.stop()
-
 # --- File Upload ---
 uploaded_file = st.file_uploader("Upload your syllabus PDF", type="pdf")
 
