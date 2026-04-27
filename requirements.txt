@@ -1,5 +1,5 @@
-echo "anthropic
+anthropic
 pypdf2
 streamlit
 markdown
-icalendar" > requirements.txt
+icalendar
