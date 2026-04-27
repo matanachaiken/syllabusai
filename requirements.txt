@@ -1,0 +1,4 @@
+anthropic
+pypdf2
+streamlit
+markdown
