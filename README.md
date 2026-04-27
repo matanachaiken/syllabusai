@@ -1,7 +1,7 @@
 ## SyllabusAI
 An AI-powered syllabus parser that extracts deadlines, assignments, and exam dates from course PDFs and generates a personalized study schedule — built with Claude API and deployed as a Streamlit web app.
 
-Live App: [syllabusai-kqkowl6c2jnaeign3tpksh.streamlit.app](https://syllabusai-kqkowl6c2jnaeign3tpksh.streamlit.app/)**
+Live App: [syllabusai-kqkowl6c2jnaeign3tpksh.streamlit.app](https://syllabusai-kqkowl6c2jnaeign3tpksh.streamlit.app/)
 
 ## What It Does:
 - Upload any course syllabus PDF
